@@ -457,6 +457,26 @@ export default function Home() {
             marginBottom: "0.75rem",
           }}
         >
+          {/* TEMP: Icon debug preview */}
+<div
+  style={{
+    display: "flex",
+    justifyContent: "center",
+    marginBottom: "1rem",
+  }}
+>
+  <img
+    src="/icons/icon-192.png"
+    alt="Icon preview"
+    style={{
+      width: "64px",
+      height: "64px",
+      borderRadius: "16px",
+      border: "1px solid rgba(148,163,184,0.6)",
+    }}
+  />
+</div>
+
           {loading && (
             <p style={{ fontSize: "0.9rem" }}>Loading market data…</p>
           )}
