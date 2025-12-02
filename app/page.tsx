@@ -420,7 +420,7 @@ export default function Home() {
         minHeight: "100vh",
         background: "radial-gradient(circle at top, #0f172a, #020617 60%)",
         color: "#e5e7eb",
-        padding: "24px",
+        padding: "16px",
       }}
     >
       <main style={{ maxWidth: "1000px", margin: "0 auto" }}>
@@ -546,20 +546,17 @@ export default function Home() {
                 key={sector}
                 onClick={() => setSectorFilter(sector)}
                 style={{
-                  padding: "0.4rem 0.8rem",
-                  borderRadius: "999px",
-                  border: "1px solid rgba(148,163,184,0.6)",
-                  background: isActive
-                    ? "rgba(59,130,246,0.9)"
-                    : "rgba(15,23,42,0.9)",
-                  color: "#e5e7eb",
-                  fontSize: "0.85rem",
-                  cursor: "pointer",
-                  boxShadow: isActive
-                    ? "0 0 15px rgba(59,130,246,0.8)"
-                    : "none",
-                  transition: "all 0.15s ease-out",
-                }}
+  padding: "0.45rem 1rem",
+  borderRadius: "999px",
+  border: "1px solid rgba(148,163,184,0.6)",
+  background: isActive
+    ? "rgba(59,130,246,0.9)"
+    : "rgba(15,23,42,0.9)",
+  color: "#e5e7eb",
+  fontSize: "0.85rem",
+  cursor: "pointer",
+  whiteSpace: "nowrap",
+}}
               >
                 {sector === "All" ? "All Sectors" : sector}
               </button>
@@ -593,12 +590,14 @@ export default function Home() {
               (left = leading, right = lagging)
             </div>
             <div
-              style={{
-                display: "flex",
-                gap: "0.6rem",
-                flexWrap: "wrap",
-              }}
-            >
+  style={{
+    display: "flex",
+    gap: "0.6rem",
+    flexWrap: "nowrap",
+    overflowX: "auto",
+    paddingBottom: "0.3rem",
+  }}
+>
               {rotationList.map((item, index) => {
                 const score = item.score;
                 const isPositive = score > 0;
@@ -669,13 +668,15 @@ export default function Home() {
 
         {/* Per-coin cards */}
         <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-            gap: "1.5rem",
-            marginTop: "0.5rem",
-          }}
-        >
+
+  style={{
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+    gap: "1rem",
+    marginTop: "1rem",
+  }}
+>
+
           {visibleCoins.map((coin) => {
             const md = marketData ? marketData[coin.id] : undefined;
             const trend = trendData ? trendData[coin.id] : undefined;
@@ -692,16 +693,18 @@ export default function Home() {
 
             return (
               <div
-                key={coin.id}
-                style={{
-                  background: "rgba(15,23,42,0.9)",
-                  borderRadius: "1rem",
-                  padding: "1.25rem 1.5rem",
-                  border: "1px solid rgba(148,163,184,0.3)",
-                  boxShadow: "0 18px 45px rgba(15,23,42,0.8)",
-                  backdropFilter: "blur(10px)",
-                }}
-              >
+  key={coin.id}
+  style={{
+    background: "rgba(15,23,42,0.9)",
+    borderRadius: "1rem",
+    padding: "1.1rem",
+    border: "1px solid rgba(148,163,184,0.3)",
+    boxShadow: "0 18px 45px rgba(15,23,42,0.8)",
+    backdropFilter: "blur(10px)",
+    fontSize: "0.95rem",
+  }}
+>
+
                 <div
                   style={{
                     display: "flex",
