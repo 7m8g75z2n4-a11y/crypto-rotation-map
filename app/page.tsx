@@ -15,6 +15,20 @@ export default function Home() {
     { id: "chainlink", symbol: "link", name: "Chainlink" },
     { id: "avalanche-2", symbol: "avax", name: "Avalanche" },
   ];
+<button
+  onClick={() => window.location.reload()}
+  style={{
+    margin: "0 auto 1rem",
+    display: "block",
+    padding: "0.5rem 1rem",
+    borderRadius: "0.6rem",
+    background: "rgba(59,130,246,0.2)",
+    border: "1px solid rgba(59,130,246,0.5)",
+    color: "#93c5fd",
+  }}
+>
+  Refresh Data
+</button>
 
   // -----------------------------
   //   Fetch Market + Trend Data
@@ -88,6 +102,59 @@ export default function Home() {
     if (change24h === null) return 0;
     return change24h / 3;
   }
+// ---------- Signal Engine helpers ----------
+
+function getTrendPhase(change7d: number | null) {
+  if (change7d === null) return "Unknown";
+
+  if (change7d > 15) return "Parabolic Uptrend";
+  if (change7d > 7) return "Strong Uptrend";
+  if (change7d > 2) return "Early Uptrend";
+
+  if (change7d < -15) return "Capitulation Downtrend";
+  if (change7d < -7) return "Strong Downtrend";
+  if (change7d < -2) return "Grinding Downtrend";
+
+  return "Sideways / Range";
+}
+
+function getAccelerationLabel(change24h: number | null, change7d: number | null) {
+  if (change24h === null || change7d === null) return "No clear acceleration";
+
+  // compare short term vs 7d average
+  const dailyAvg = change7d / 7;
+
+  if (change24h > dailyAvg + 2) return "Short-term acceleration";
+  if (change24h < dailyAvg - 2) return "Short-term deceleration";
+
+  return "Stable vs recent trend";
+}
+
+function getTrafficLight(rotationScore: number) {
+  // tweak thresholds later if you want
+  if (rotationScore >= 6) {
+    return {
+      label: "Green – Favorable rotation",
+      color: "#22c55e",
+      bg: "rgba(34,197,94,0.18)",
+      border: "rgba(34,197,94,0.6)",
+    };
+  }
+  if (rotationScore <= -2) {
+    return {
+      label: "Red – High risk / fading",
+      color: "#ef4444",
+      bg: "rgba(239,68,68,0.16)",
+      border: "rgba(239,68,68,0.6)",
+    };
+  }
+  return {
+    label: "Yellow – Neutral / wait",
+    color: "#facc15",
+    bg: "rgba(250,204,21,0.14)",
+    border: "rgba(250,204,21,0.55)",
+  };
+}
 
   // -----------------------------
   //   Loading Screen
@@ -128,6 +195,21 @@ export default function Home() {
       >
         Crypto Rotation Map
       </h1>
+<button
+  onClick={() => window.location.reload()}
+  style={{
+    margin: "0.75rem auto 1.25rem",
+    display: "block",
+    padding: "0.5rem 1.1rem",
+    borderRadius: "0.6rem",
+    background: "rgba(59,130,246,0.18)",
+    border: "1px solid rgba(59,130,246,0.6)",
+    color: "#bfdbfe",
+    fontSize: "0.9rem",
+  }}
+>
+  Refresh Data
+</button>
 
       <div
         style={{
