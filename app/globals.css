@@ -1,3 +1,12 @@
+* {
+  transition: all 0.20s ease-out;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+
 @import "tailwindcss";
 
 :root {
@@ -23,6 +32,6 @@ html,
 body {
   margin: 0;
   padding: 0;
-  background-color: #020617; /* same dark navy as the app */
+  background-color: #020617; /* same dark navy as your app */
+  color: #e5e7eb; /* optional but nice default text color */
 }
-
