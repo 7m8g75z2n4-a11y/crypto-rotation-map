@@ -1,49 +1,4 @@
 "use client";
-// Mini sparkline chart
-function Sparkline({ values }: { values: number[] }) {
-  if (!values || values.length === 0) return null;
-
-  const width = 220;
-  const height = 48;
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const range = max - min || 1;
-  const innerHeight = height - 8;
-  const stepX = values.length > 1 ? width / (values.length - 1) : width;
-
-  const points = values.map((v, i) => {
-    const x = i * stepX;
-    const norm = (v - min) / range;
-    const y = height - (norm * innerHeight + 4);
-    return { x, y };
-  });
-
-  const d = points
-    .map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`)
-    .join(" ");
-
-  return (
-    <svg
-      width={width}
-      height={height}
-      viewBox={`0 0 ${width} ${height}`}
-      style={{
-        display: "block",
-        background: "rgba(15,23,42,0.9)",
-        borderRadius: 6,
-        border: "1px solid rgba(148,163,184,0.7)",
-      }}
-    >
-      <path
-        d={d}
-        fill="none"
-        stroke="#38bdf8"
-        strokeWidth={2}
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
 
 import { useEffect, useState } from "react";
 
@@ -54,88 +9,78 @@ type CoinDef = {
 };
 
 const COINS: CoinDef[] = [
-  { id: "bitcoin", symbol: "btc", name: "Bitcoin" },
-  { id: "ethereum", symbol: "eth", name: "Ethereum" },
-  { id: "solana", symbol: "sol", name: "Solana" },
-  { id: "chainlink", symbol: "link", name: "Chainlink" },
-  { id: "avalanche-2", symbol: "avax", name: "Avalanche" },
+  { id: "bitcoin", symbol: "BTC", name: "Bitcoin" },
+  { id: "ethereum", symbol: "ETH", name: "Ethereum" },
+  { id: "solana", symbol: "SOL", name: "Solana" },
+  { id: "chainlink", symbol: "LINK", name: "Chainlink" },
+  { id: "avalanche-2", symbol: "AVAX", name: "Avalanche" },
 ];
 
 type MarketEntry = {
   price: number | null;
   change24h: number | null;
   change7d: number | null;
+  history7d: number[];
 };
 
 type MarketMap = Record<string, MarketEntry>;
 
-/* -------- Signal helpers -------- */
+/* ------------ signal helpers ------------ */
 
-function getSentiment(change24h: number | null): string {
-  if (change24h === null || Number.isNaN(change24h)) return "Neutral";
-  if (change24h > 3) return "Strong Bullish";
-  if (change24h > 0.5) return "Bullish";
-  if (change24h < -3) return "Strong Bearish";
-  if (change24h < -0.5) return "Bearish";
+function getSentiment(change: number | null): string {
+  if (change === null || Number.isNaN(change)) return "Neutral";
+  if (change > 3) return "Strong Bullish";
+  if (change > 0.5) return "Bullish";
+  if (change < -3) return "Strong Bearish";
+  if (change < -0.5) return "Bearish";
   return "Neutral";
 }
 
-function getTrendLabel(change7d: number | null): string {
-  if (change7d === null || Number.isNaN(change7d)) return "Unknown";
-  if (change7d > 15) return "Strong Uptrend";
-  if (change7d > 5) return "Uptrend";
-  if (change7d < -15) return "Strong Downtrend";
-  if (change7d < -5) return "Downtrend";
+function getTrendLabel(change: number | null): string {
+  if (change === null || Number.isNaN(change)) return "Unknown";
+  if (change > 15) return "Strong Uptrend";
+  if (change > 5) return "Uptrend";
+  if (change < -15) return "Strong Downtrend";
+  if (change < -5) return "Downtrend";
   return "Sideways";
 }
 
-function getTrendPhase(change7d: number | null): string {
-  if (change7d === null || Number.isNaN(change7d)) return "Unknown";
-
-  if (change7d > 20) return "Parabolic Uptrend";
-  if (change7d > 10) return "Expansion Phase";
-  if (change7d > 3) return "Early Uptrend";
-
-  if (change7d < -20) return "Capitulation";
-  if (change7d < -10) return "Sharp Downtrend";
-  if (change7d < -3) return "Grinding Downtrend";
-
+function getTrendPhase(change: number | null): string {
+  if (change === null || Number.isNaN(change)) return "Unknown";
+  if (change > 20) return "Parabolic Uptrend";
+  if (change > 10) return "Expansion Phase";
+  if (change > 3) return "Early Uptrend";
+  if (change < -20) return "Capitulation";
+  if (change < -10) return "Sharp Downtrend";
+  if (change < -3) return "Grinding Downtrend";
   return "Range / Compression";
 }
 
 function getAccelerationLabel(
-  change24h: number | null,
-  change7d: number | null
+  c24: number | null,
+  c7: number | null
 ): string {
-  if (
-    change24h === null ||
-    Number.isNaN(change24h) ||
-    change7d === null ||
-    Number.isNaN(change7d)
-  ) {
-    return "No clear acceleration";
+  if (c24 === null || Number.isNaN(c24) || c7 === null || Number.isNaN(c7)) {
+    return "Stable";
   }
-
-  const dailyAvg = change7d / 7;
-
-  if (change24h > dailyAvg + 3) return "Short-term acceleration";
-  if (change24h < dailyAvg - 3) return "Short-term deceleration";
-
+  const avg = c7 / 7;
+  if (c24 > avg + 3) return "Short-term acceleration";
+  if (c24 < avg - 3) return "Short-term deceleration";
   return "Stable vs recent trend";
 }
 
-function getTrendScore(change7d: number | null): number {
-  if (change7d === null || Number.isNaN(change7d)) return 0;
-  return change7d / 4;
+function getTrendScore(change: number | null): number {
+  if (change === null || Number.isNaN(change)) return 0;
+  return change / 4;
 }
 
-function getMomentumScore(change24h: number | null): number {
-  if (change24h === null || Number.isNaN(change24h)) return 0;
-  return change24h / 3;
+function getMomentumScore(change: number | null): number {
+  if (change === null || Number.isNaN(change)) return 0;
+  return change / 3;
 }
 
-function getTrafficLight(rotationScore: number) {
-  if (rotationScore >= 6) {
+function getTrafficLight(score: number) {
+  if (score >= 6) {
     return {
       label: "Green – Favorable rotation",
       color: "#22c55e",
@@ -143,19 +88,19 @@ function getTrafficLight(rotationScore: number) {
       border: "rgba(34,197,94,0.6)",
     };
   }
-  if (rotationScore <= -2) {
+  if (score <= -2) {
     return {
-      label: "Red – High risk / fading",
+      label: "Red – High risk",
       color: "#ef4444",
-      bg: "rgba(239,68,68,0.16)",
+      bg: "rgba(239,68,68,0.18)",
       border: "rgba(239,68,68,0.6)",
     };
   }
   return {
     label: "Yellow – Neutral / wait",
     color: "#facc15",
-    bg: "rgba(250,204,21,0.14)",
-    border: "rgba(250,204,21,0.55)",
+    bg: "rgba(250,204,21,0.2)",
+    border: "rgba(250,204,21,0.6)",
   };
 }
 
@@ -164,190 +109,270 @@ function formatPct(v: number | null): string {
   return v.toFixed(2) + "%";
 }
 
-/* -------- Component -------- */
+/* ------------ chart inside each card ------------ */
+
+type CardChartProps = {
+  values: number[];
+  showLow?: boolean;
+  showHigh?: boolean;
+};
+
+function CardChart({ values, showLow = true, showHigh = true }: CardChartProps) {
+  if (!values || values.length === 0) return null;
+
+  const width = 160;
+  const height = 160;
+  const paddingX = 10;
+  const paddingY = 10;
+
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+  const minIndex = values.indexOf(min);
+  const maxIndex = values.indexOf(max);
+
+  const innerWidth = width - paddingX * 2;
+  const innerHeight = height - paddingY * 2;
+  const stepX = values.length > 1 ? innerWidth / (values.length - 1) : innerWidth;
+
+  const points = values.map((v, i) => {
+    const x = paddingX + i * stepX;
+    const norm = (v - min) / range;
+    const y = height - (paddingY + norm * innerHeight);
+    return { x, y };
+  });
+
+  const linePath = points
+    .map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`)
+    .join(" ");
+
+  const areaPath =
+    points.length > 0
+      ? [
+          `M${points[0].x},${height - paddingY}`,
+          ...points.map((p) => `L${p.x},${p.y}`),
+          `L${points[points.length - 1].x},${height - paddingY}`,
+          "Z",
+        ].join(" ")
+      : "";
+
+  return (
+    <svg
+      width={width}
+      height={height}
+      viewBox={`0 0 ${width} ${height}`}
+      style={{
+        display: "block",
+        background: "rgba(15,23,42,0.95)",
+        borderRadius: 10,
+        border: "1px solid rgba(148,163,184,0.6)",
+      }}
+    >
+      <line
+        x1={paddingX}
+        y1={height / 2}
+        x2={width - paddingX}
+        y2={height / 2}
+        stroke="rgba(148,163,184,0.25)"
+        strokeWidth={0.6}
+        strokeDasharray="4 4"
+      />
+      <path d={areaPath} fill="rgba(56,189,248,0.18)" stroke="none" />
+      <path
+        d={linePath}
+        fill="none"
+        stroke="#38bdf8"
+        strokeWidth={2.2}
+        strokeLinecap="round"
+      />
+      {/* low/high markers */}
+      {showLow && points[minIndex] && (
+        <circle
+          cx={points[minIndex].x}
+          cy={points[minIndex].y}
+          r={4}
+          fill="#b91c1c"
+          stroke="#fecaca"
+          strokeWidth={1}
+        />
+      )}
+      {showHigh && maxIndex !== minIndex && points[maxIndex] && (
+        <circle
+          cx={points[maxIndex].x}
+          cy={points[maxIndex].y}
+          r={4}
+          fill="#16a34a"
+          stroke="#bbf7d0"
+          strokeWidth={1}
+        />
+      )}
+      {points.length > 0 && (
+        <circle
+          cx={points[points.length - 1].x}
+          cy={points[points.length - 1].y}
+          r={3}
+          fill="#38bdf8"
+        />
+      )}
+    </svg>
+  );
+}
+
+/* ------------ main page ------------ */
 
 export default function Page() {
   const [marketData, setMarketData] = useState<MarketMap | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  // which coins are visible (saved in localStorage)
   const [visibleIds, setVisibleIds] = useState<string[]>(
     COINS.map((c) => c.id)
   );
 
-  // Load saved visibility from localStorage
+  // load visibility from localStorage
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
       const saved = window.localStorage.getItem("crm_visible_ids");
       if (!saved) return;
       const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.every((x) => typeof x === "string")) {
-        setVisibleIds(parsed);
+      if (Array.isArray(parsed)) {
+        const filtered = parsed.filter((id: string) =>
+          COINS.some((c) => c.id === id)
+        );
+        if (filtered.length > 0) {
+          setVisibleIds(filtered);
+        }
       }
-    } catch (e) {
-      console.warn("Failed to read saved filters", e);
+    } catch {
+      // ignore
     }
   }, []);
 
-  // Save visibility when it changes
+  // save visibility
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
-      window.localStorage.setItem(
-        "crm_visible_ids",
-        JSON.stringify(visibleIds)
-      );
-    } catch (e) {
-      console.warn("Failed to save filters", e);
+      window.localStorage.setItem("crm_visible_ids", JSON.stringify(visibleIds));
+    } catch {
+      // ignore
     }
   }, [visibleIds]);
 
-  // Fetch market data
+  // fetch prices + 7d history (sparkline) in a single call to avoid rate limits
   useEffect(() => {
     async function load() {
       try {
-        setLoading(true);
-        setErrorMsg(null);
-
         const ids = COINS.map((c) => c.id).join(",");
-        const url = `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`;
+        const url =
+          "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd" +
+          "&ids=" +
+          ids +
+          "&order=market_cap_desc&per_page=250&page=1&sparkline=true" +
+          "&price_change_percentage=24h,7d";
 
         const res = await fetch(url);
-        if (!res.ok) throw new Error("API response not ok");
-
-        const raw = await res.json();
+        if (!res.ok) throw new Error("market data API not ok");
+        const raw: any[] = await res.json();
 
         const map: MarketMap = {};
-        for (const coin of COINS) {
-          const entry = raw[coin.id];
-          const price =
-            typeof entry?.usd === "number"
-              ? entry.usd
-              : Number(entry?.usd ?? NaN);
-          const change24h =
-            typeof entry?.usd_24h_change === "number"
-              ? entry.usd_24h_change
-              : Number(entry?.usd_24h_change ?? NaN);
+        for (const coin of raw) {
+          const id = coin?.id as string | undefined;
+          if (!id || !COINS.some((c) => c.id === id)) continue;
 
-          // Fake 7d change for now (replace with real API later)
-          const change7d = Math.round((Math.random() * 20 - 10) * 100) / 100;
+          const price = Number(coin?.current_price ?? NaN);
+          const c24 = Number(
+            coin?.price_change_percentage_24h_in_currency ??
+              coin?.price_change_percentage_24h
+          );
+          const c7 = Number(
+            coin?.price_change_percentage_7d_in_currency ??
+              coin?.price_change_percentage_7d
+          );
+
+          const prices7d: number[] = Array.isArray(coin?.sparkline_in_7d?.price)
+            ? coin.sparkline_in_7d.price
+                .map((v: any) => Number(v))
+                .filter((v: number) => !Number.isNaN(v))
+            : [];
 
           map[coin.id] = {
             price: Number.isNaN(price) ? null : price,
-            change24h: Number.isNaN(change24h) ? null : change24h,
-            change7d,
+            change24h: Number.isNaN(c24) ? null : c24,
+            change7d: Number.isNaN(c7) ? null : c7,
+            history7d: prices7d,
           };
         }
 
         setMarketData(map);
-        setLoading(false);
-      } catch (err: any) {
+      } catch (err) {
         console.error("Failed to load market data", err);
-        setErrorMsg("Failed to load market data. Try refreshing.");
-        setLoading(false);
+        setMarketData({});
       }
     }
 
     load();
   }, []);
 
-  const visibleCoins = COINS.filter((c) => visibleIds.includes(c.id));
-
-  if (loading || !marketData) {
+  if (!marketData) {
     return (
       <main
         style={{
-          minHeight: "100vh",
-          padding: "2rem 1.5rem",
+          height: "100vh",
           display: "flex",
-          alignItems: "center",
           justifyContent: "center",
+          alignItems: "center",
           color: "#e5e7eb",
         }}
       >
-        <div style={{ textAlign: "center" }}>
-          <h1 style={{ marginBottom: "0.75rem" }}>Crypto Rotation Map</h1>
-          <p style={{ opacity: 0.8 }}>Loading market data…</p>
-        </div>
+        Loading market data…
       </main>
     );
   }
 
+  const visibleCoins = COINS.filter((c) => visibleIds.includes(c.id));
+
   return (
     <main
       style={{
-        minHeight: "100vh",
-        padding: "1.6rem 1.2rem 2.5rem",
-        maxWidth: "780px",
+        maxWidth: "820px",
         margin: "0 auto",
+        padding: "1.8rem 1rem 2.5rem",
         color: "#e5e7eb",
       }}
     >
       <h1
         style={{
-          fontSize: "1.9rem",
-          fontWeight: 700,
           textAlign: "center",
-          marginBottom: "0.8rem",
+          fontSize: "2rem",
+          marginBottom: "0.6rem",
+          fontWeight: 700,
         }}
       >
         Crypto Rotation Map
       </h1>
 
-      <button
-        onClick={() => window.location.reload()}
-        style={{
-          margin: "0 auto 1.1rem",
-          display: "block",
-          padding: "0.55rem 1.3rem",
-          borderRadius: "999px",
-          background: "rgba(37,99,235,0.18)",
-          border: "1px solid rgba(37,99,235,0.7)",
-          color: "#bfdbfe",
-          fontSize: "0.9rem",
-        }}
-      >
-        Refresh Data
-      </button>
-
-      {/* Coin filter chips */}
+      {/* visibility chips */}
       <div
         style={{
           display: "flex",
+          gap: "0.75rem",
           flexWrap: "wrap",
           justifyContent: "center",
-          gap: "0.75rem",
           marginBottom: "1.5rem",
           padding: "0.75rem",
+          background: "rgba(15,23,42,0.7)",
           borderRadius: "0.75rem",
-          background: "rgba(15,23,42,0.9)",
-          border: "1px solid rgba(148,163,184,0.5)",
+          border: "1px solid rgba(148,163,184,0.4)",
+          fontSize: "0.8rem",
         }}
       >
-        <span
-          style={{
-            fontSize: "0.85rem",
-            fontWeight: 500,
-            marginRight: "0.5rem",
-            color: "#e5e7eb",
-            opacity: 0.8,
-          }}
-        >
-          Visible coins:
-        </span>
-
-        {COINS.map((coin) => {
-          const active = visibleIds.includes(coin.id);
+        <span style={{ opacity: 0.8 }}>Visible coins:</span>
+        {COINS.map((c) => {
+          const active = visibleIds.includes(c.id);
           return (
             <button
-              key={coin.id}
+              key={c.id}
               onClick={() =>
                 setVisibleIds((prev) =>
-                  active
-                    ? prev.filter((id) => id !== coin.id)
-                    : [...prev, coin.id]
+                  active ? prev.filter((x) => x !== c.id) : [...prev, c.id]
                 )
               }
               style={{
@@ -356,34 +381,18 @@ export default function Page() {
                 border: active
                   ? "1px solid rgba(56,189,248,0.9)"
                   : "1px solid rgba(148,163,184,0.7)",
-                background: active
-                  ? "rgba(56,189,248,0.18)"
-                  : "#020617",
+                background: active ? "rgba(56,189,248,0.18)" : "#020617",
                 color: "#e5e7eb",
-                fontSize: "0.8rem",
                 cursor: "pointer",
-                opacity: active ? 1 : 0.8,
               }}
             >
-              {coin.symbol.toUpperCase()}
+              {c.symbol}
             </button>
           );
         })}
       </div>
 
-      {errorMsg && (
-        <p
-          style={{
-            textAlign: "center",
-            marginBottom: "1rem",
-            fontSize: "0.9rem",
-            color: "#fecaca",
-          }}
-        >
-          {errorMsg}
-        </p>
-      )}
-
+      {/* cards */}
       {visibleCoins.length === 0 ? (
         <p
           style={{
@@ -392,81 +401,51 @@ export default function Page() {
             fontSize: "0.9rem",
           }}
         >
-          No coins selected. Use the filters above to choose what to show.
+          No coins selected. Use the filters above.
         </p>
       ) : (
-        <div
-          style={{
-            display: "grid",
-            gap: "1.1rem",
-          }}
-        >
+        <div style={{ display: "grid", gap: "1.25rem" }}>
           {visibleCoins.map((coin) => {
             const entry = marketData[coin.id];
-
             const price = entry?.price ?? null;
-            const change24h = entry?.change24h ?? null;
-            const change7d = entry?.change7d ?? null;
+            const c24 = entry?.change24h ?? null;
+            const c7 = entry?.change7d ?? null;
+            const history = entry?.history7d ?? [];
 
-            if (price === null || Number.isNaN(price)) {
-              return (
-                <div
-                  key={coin.id}
-                  style={{
-                    background: "rgba(15,23,42,0.7)",
-                    borderRadius: "1rem",
-                    padding: "1.1rem",
-                    border: "1px dashed rgba(148,163,184,0.4)",
-                    opacity: 0.6,
-                    fontSize: "0.9rem",
-                  }}
-                >
-                  <div style={{ marginBottom: "0.4rem", fontWeight: 500 }}>
-                    {coin.name}
-                  </div>
-                  <div style={{ opacity: 0.8 }}>Loading market data…</div>
-                </div>
-              );
-            }
+            const trend = getTrendLabel(c7);
+            const sentiment = getSentiment(c24);
+            const phase = getTrendPhase(c7);
+            const accel = getAccelerationLabel(c24, c7);
 
-            const sentiment = getSentiment(change24h);
-            const trendLabel = getTrendLabel(change7d);
-            const trendScore = getTrendScore(change7d);
-            const momentumScore = getMomentumScore(change24h);
-            const rotationScore = trendScore * 2 + momentumScore;
+            const score =
+              getTrendScore(c7) * 2 + getMomentumScore(c24);
+            const light = getTrafficLight(score);
 
-            const trendPhase = getTrendPhase(change7d);
-            const accelerationLabel = getAccelerationLabel(
-              change24h,
-              change7d
-            );
-            const traffic = getTrafficLight(rotationScore);
+            const c24v = c24 ?? 0;
+            const c7v = c7 ?? 0;
 
-            // 7d bar intensity: map change7d into [-1, 1]
             let intensity = 0;
-            if (change7d !== null && !Number.isNaN(change7d)) {
-              intensity = Math.max(-1, Math.min(1, change7d / 20));
+            if (c7 !== null && !Number.isNaN(c7)) {
+              intensity = Math.max(-1, Math.min(1, c7 / 20));
             }
-
             const barWidth = `${Math.max(15, Math.abs(intensity) * 100)}%`;
             const barColor =
               intensity > 0
-                ? "linear-gradient(to right, #16a34a, #4ade80)"
+                ? "linear-gradient(to right,#16a34a,#4ade80)"
                 : intensity < 0
-                ? "linear-gradient(to right, #b91c1c, #f97373)"
-                : "linear-gradient(to right, #64748b, #94a3b8)";
+                ? "linear-gradient(to right,#b91c1c,#f97373)"
+                : "linear-gradient(to right,#64748b,#94a3b8)";
 
             return (
               <div
                 key={coin.id}
                 style={{
-                  background: "rgba(15,23,42,0.95)",
+                  padding: "1.2rem",
                   borderRadius: "1rem",
-                  padding: "1.1rem",
+                  background: "rgba(15,23,42,0.95)",
                   border: "1px solid rgba(148,163,184,0.35)",
                   boxShadow: "0 18px 45px rgba(15,23,42,0.8)",
-                  backdropFilter: "blur(10px)",
-                  fontSize: "0.95rem",
+                  fontSize: "0.94rem",
                 }}
               >
                 {/* header */}
@@ -477,69 +456,104 @@ export default function Page() {
                     marginBottom: "0.4rem",
                   }}
                 >
-                  <div style={{ fontWeight: 600 }}>{coin.name}</div>
-                  <div style={{ opacity: 0.7 }}>
-                    {coin.symbol.toUpperCase()}
+                  <strong>{coin.name}</strong>
+                  <span style={{ opacity: 0.7 }}>{coin.symbol}</span>
+                </div>
+
+                {/* chart */}
+                <div
+                  style={{
+                    marginBottom: "0.7rem",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: "0.8rem",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: "0.78rem",
+                      opacity: 0.8,
+                    }}
+                  >
+                    7d price shape
+                  </div>
+                  <div
+                    style={{
+                      flexShrink: 0,
+                      display: "flex",
+                      gap: "0.4rem",
+                    }}
+                  >
+                    <CardChart values={history} showLow={false} />
+                    <CardChart values={history} showHigh={false} />
+                    <CardChart values={history} />
                   </div>
                 </div>
 
-                {/* core metrics */}
-                <div style={{ marginBottom: "0.4rem" }}>
+                {/* metrics */}
+                <div style={{ marginBottom: "0.3rem" }}>
                   <span style={{ opacity: 0.7 }}>Price: </span>
-                  <span>${price.toFixed(2)}</span>
+                  <span>
+                    {price !== null ? `$${price.toFixed(2)}` : "—"}
+                  </span>
                 </div>
 
-                <div style={{ marginBottom: "0.4rem" }}>
+                <div style={{ marginBottom: "0.3rem" }}>
                   <span style={{ opacity: 0.7 }}>24h: </span>
                   <span
                     style={{
                       color:
-                        (change24h ?? 0) > 0
+                        c24 === null
+                          ? "#e5e7eb"
+                          : c24v > 0
                           ? "#22c55e"
-                          : (change24h ?? 0) < 0
+                          : c24v < 0
                           ? "#ef4444"
                           : "#e5e7eb",
                     }}
                   >
-                    {formatPct(change24h)}
+                    {formatPct(c24)}
                   </span>
                 </div>
 
-                <div style={{ marginBottom: "0.4rem" }}>
+                <div style={{ marginBottom: "0.3rem" }}>
                   <span style={{ opacity: 0.7 }}>7d: </span>
                   <span
                     style={{
                       color:
-                        (change7d ?? 0) > 0
+                        c7 === null
+                          ? "#e5e7eb"
+                          : c7v > 0
                           ? "#22c55e"
-                          : (change7d ?? 0) < 0
+                          : c7v < 0
                           ? "#ef4444"
                           : "#e5e7eb",
                     }}
                   >
-                    {formatPct(change7d)}
+                    {formatPct(c7)}
                   </span>
                 </div>
 
-                <div style={{ marginBottom: "0.4rem" }}>
+                <div style={{ marginBottom: "0.3rem" }}>
                   <span style={{ opacity: 0.7 }}>Trend: </span>
-                  <span>{trendLabel}</span>
+                  <span>{trend}</span>
                 </div>
 
-                <div style={{ marginBottom: "0.4rem" }}>
+                <div style={{ marginBottom: "0.3rem" }}>
                   <span style={{ opacity: 0.7 }}>Sentiment: </span>
                   <span>{sentiment}</span>
                 </div>
 
-                <div style={{ marginBottom: "0.6rem" }}>
+                <div style={{ marginBottom: "0.5rem" }}>
                   <span style={{ opacity: 0.7 }}>Rotation score: </span>
-                  <span>{rotationScore.toFixed(1)}</span>
+                  <span>{score.toFixed(1)}</span>
                 </div>
 
-                {/* signal summary */}
+                {/* traffic light & text */}
                 <div
                   style={{
-                    marginTop: "0.2rem",
+                    marginTop: "0.3rem",
                     paddingTop: "0.5rem",
                     borderTop: "1px solid rgba(148,163,184,0.35)",
                     display: "flex",
@@ -547,40 +561,37 @@ export default function Page() {
                     gap: "0.35rem",
                   }}
                 >
-                  {/* traffic light chip */}
                   <div
                     style={{
                       alignSelf: "flex-start",
-                      padding: "0.18rem 0.55rem",
+                      padding: "0.18rem 0.6rem",
                       borderRadius: "999px",
-                      border: `1px solid ${traffic.border}`,
-                      background: traffic.bg,
-                      color: traffic.color,
+                      border: `1px solid ${light.border}`,
+                      background: light.bg,
+                      color: light.color,
                       fontSize: "0.78rem",
                       fontWeight: 500,
                     }}
                   >
-                    {traffic.label}
+                    {light.label}
                   </div>
-
-                  {/* text summary */}
                   <div style={{ fontSize: "0.82rem", opacity: 0.9 }}>
                     <div>
                       <span style={{ opacity: 0.8 }}>Trend phase: </span>
-                      <span>{trendPhase}</span>
+                      <span>{phase}</span>
                     </div>
                     <div>
                       <span style={{ opacity: 0.8 }}>Short-term move: </span>
-                      <span>{accelerationLabel}</span>
+                      <span>{accel}</span>
                     </div>
                   </div>
                 </div>
 
-                {/* mini 7d bar chart */}
+                {/* 7d strength bar */}
                 <div
                   style={{
-                    marginTop: "0.6rem",
-                    paddingTop: "0.45rem",
+                    marginTop: "0.8rem",
+                    paddingTop: "0.55rem",
                     borderTop: "1px dashed rgba(148,163,184,0.35)",
                   }}
                 >
@@ -588,32 +599,17 @@ export default function Page() {
                     style={{
                       display: "flex",
                       justifyContent: "space-between",
-                      alignItems: "center",
-                      marginBottom: "0.3rem",
+                      marginBottom: "0.25rem",
+                      fontSize: "0.78rem",
                     }}
                   >
-                    <span
-                      style={{
-                        fontSize: "0.78rem",
-                        opacity: 0.8,
-                      }}
-                    >
-                      7d strength
-                    </span>
-                    <span
-                      style={{
-                        fontSize: "0.78rem",
-                        opacity: 0.75,
-                      }}
-                    >
-                      {change7d !== null ? change7d.toFixed(1) + "%" : "—"}
-                    </span>
+                    <span>7d strength</span>
+                    <span>{c7 !== null ? c7.toFixed(1) + "%" : "—"}</span>
                   </div>
-
                   <div
                     style={{
-                      width: "100%",
                       height: "10px",
+                      width: "100%",
                       borderRadius: "999px",
                       background: "rgba(15,23,42,0.9)",
                       border: "1px solid rgba(148,163,184,0.6)",
@@ -622,10 +618,9 @@ export default function Page() {
                   >
                     <div
                       style={{
-                        width: barWidth,
                         height: "100%",
+                        width: barWidth,
                         background: barColor,
-                        transition: "width 0.25s ease-out",
                       }}
                     />
                   </div>
